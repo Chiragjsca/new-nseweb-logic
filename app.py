@@ -307,6 +307,8 @@ def column_format(col, series=None):
 HYPERLINK_SPECS = {
     "NSE Chart": ("https://www.nseindia.com/get-quotes/equity?symbol=", "", "🟢", False),
     "NewW NSE": ("https://marketlens.nseindia.com/stocks/", "", "Nnse ", True),
+    "stockscans Chart": ("https://www.stockscans.in/charts/NSE%3A", "", "SS Chart ", True),
+    "stockscans": ("https://www.stockscans.in/company/NSE:", "", "SS Chart ", True),
     "Trading View": ("https://www.tradingview.com/symbols/", "", "Tre ", True),
     "History Data": ("https://www.equitypandit.com/historical-data/", "", "his ", True),
     "Chartlink": ("https://chartink.com/stocks/", ".html", "CL ", True),
@@ -323,8 +325,10 @@ for _cat in CATEGORY_ORDER:
             MASTER_ORDER.append(_c)
 # NSE Chart dot sits right after Company (NewW NSE next to it); the other links go at the far right.
 MASTER_ORDER.insert(MASTER_ORDER.index("Company") + 1, "NSE Chart")
-MASTER_ORDER.insert(MASTER_ORDER.index("NSE Chart") + 1, "NewW NSE")   # right beside NSE Chart
-MASTER_ORDER += [c for c in LINK_COLUMNS if c not in ("NSE Chart", "NewW NSE")]
+_NEAR_LINKS = ["NSE Chart", "NewW NSE", "stockscans Chart", "stockscans"]   # grouped right after Company
+for _i, _c in enumerate(_NEAR_LINKS[1:], start=1):
+    MASTER_ORDER.insert(MASTER_ORDER.index("NSE Chart") + _i, _c)
+MASTER_ORDER += [c for c in LINK_COLUMNS if c not in _NEAR_LINKS]
 
 
 # =====================================================================================
