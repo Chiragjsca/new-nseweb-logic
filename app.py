@@ -124,11 +124,8 @@ for _t in TABS:
     _t["stem"] = stem
     _t["file"] = f"{stem}.csv"
     # Excel sheet names: max 31 chars, none of []:*?/\
-    _t["sheet"] = f"{stem} - {_t['short']}"[:31]
+    _t["sheet"] = f"{_t['idx']} - {_t['short']}"[:31]
 TAB_BY_IDX = {t["idx"]: t for t in TABS}
-
-# "stocks", "stocks (3)", "stocks(3)", and browser/Windows copies such as "stocks (3) - Copy"
-STEM_RX = re.compile(r"^stocks\s*(?:\(\s*(\d+)\s*\))?(?:\s*-\s*copy)?$", re.IGNORECASE)
 
 MASTER_SHEET_NAME = "Master_Dashboard"
 
@@ -552,7 +549,7 @@ def write_table_sheet(ws, df, header_row, nav_target=None):
                     formula=[f'AND(ISNUMBER({first}),{first}<0)'], font=Font(color="FF0000")))
 
 
-def build_workbook(tabs, master_df, master_order, include_tabs=True):
+def build_workbook(tabs, master_df, master_order, include_tabs=True, source_names=None):
     """tabs: {tab_idx: df}. include_tabs=False -> only the Master sheet."""
     wb = Workbook()
     wb.remove(wb.active)
@@ -577,7 +574,7 @@ def build_workbook(tabs, master_df, master_order, include_tabs=True):
                  len(master_order), list(master_order), f"#'{MASTER_SHEET_NAME}'!A1")]
         for t in exportable:
             d = tabs[t["idx"]]
-            rows.append((f"➡️ {t['sheet']}", t["category"], t["file"], len(d), len(d.columns),
+            rows.append((f"➡️ {t['sheet']}", t["category"], (source_names or {}).get(t["idx"], "—"), len(d), len(d.columns),
                          list(d.columns), f"#'{t['sheet']}'!A1"))
         for i, (name, cat, src, n, nc, cols, target) in enumerate(rows, start=1):
             r = hdr + i
@@ -722,15 +719,61 @@ def extract_all_files(zip_bytes, _depth=0, _max_depth=3):
     return results
 
 
-def resolve_tab_idx(filename):
-    base = os.path.basename(filename)
-    if not base.lower().endswith(".csv"):
-        return None
-    m = STEM_RX.match(base[:-4].strip())
-    if not m:
-        return None
-    idx = int(m.group(1)) if m.group(1) else 0
-    return idx if idx in TAB_BY_IDX else None
+# A file is identified by the columns it contains, NOT by its name, so
+# "stocks (12).csv" may hold any of the 15 data sets. These columns are unique to one slot:
+SIGNATURE_TARGETS = {
+    "Debt to Equity": 0,
+    "Earning Per Share (EPS)": 1, "Dividend Per Share(DPS)": 1, "Dividend Cover ratio": 1,
+    "Dividend Yield(%)": 1,
+    "Face Value": 2,
+    "Interest Coverage": 3,
+    "Promoter Holding (%)": 4, "Public Holding": 4,
+    "Return Over % Year to Date": 5, "Return Over % 1 Year": 5,
+    "Return Over % 3 Years": 5, "Return Over % 5 Years": 5,
+    "Open Price": 6, "High Price": 6, "Low Price": 6, "Close Price": 6,
+    "Price Band Lower": 6, "Price Band Higher": 6,
+    "VWAP": 7,
+    "52W Low": 8, "52W High": 8, "All time Low": 8, "All time High": 8,
+    "Daily Volatility": 9, "Annualized Volatility": 9,
+    "200 DMA": 10,
+    "20 DMA": 11, "50 DMA": 11,
+    "Total Income (in Lakhs)": 12, "Total Expense (in Lakhs)": 12, "Current Tax (in Lakhs)": 12,
+    "Deferred Tax (in Lakhs)": 12, "Total Tax Expenses (in Lakhs)": 12,
+    "Total Equity (in Lakhs)": 13, "Total Assets (in Lakhs)": 13, "Current Assets (in Lakhs)": 13,
+    "Non-Current Assets (in Lakhs)": 13, "Total Liabilities (in Lakhs)": 13,
+    "Current Liabilities (in Lakhs)": 13,
+    "Non-Current Liabilities (in Lakhs)": 14, "Total Borrowings (in Lakhs)": 14,
+}
+# A file with only the common columns (Company … P/E) has nothing of its own: it is slot 3,
+# the Interest Coverage file, which has no source column.
+BASE_ONLY_IDX = 3
+
+
+@st.cache_data(show_spinner=False)
+def detect_tab_idx(file_bytes):
+    """Returns (slot_idx or None, reason). Reads the header row only."""
+    try:
+        head = read_csv_bytes_header(file_bytes)
+    except Exception as e:
+        return None, f"unreadable CSV ({e})"
+    targets = {RAW_TO_TARGET.get(norm_key(c)) for c in head}
+    if "Company" not in targets:
+        return None, "no 'Company' column"
+    slots = sorted({SIGNATURE_TARGETS[t] for t in targets if t in SIGNATURE_TARGETS})
+    if not slots:
+        return BASE_ONLY_IDX, "only common columns"
+    if len(slots) > 1:
+        return slots[0], f"columns from several data sets {slots}; treated as {slots[0]}"
+    return slots[0], ""
+
+
+def read_csv_bytes_header(file_bytes):
+    for enc in ("utf-8-sig", "cp1252", "latin-1"):
+        try:
+            return list(pd.read_csv(io.BytesIO(file_bytes), nrows=0, encoding=enc).columns)
+        except UnicodeDecodeError:
+            continue
+    raise ValueError("cannot decode")
 
 
 def parse_row_selector(text, n_rows):
@@ -850,7 +893,7 @@ def main():
     st.title(f"📊 {APP_TITLE}")
     st.markdown('<div id="main_tab"></div>', unsafe_allow_html=True)
     st.caption(
-        "Upload the 15 files **stocks.csv, stocks (1).csv … stocks (14).csv** (or a ZIP of them). "
+        "Upload the 15 stocks CSV files in any order, with any names (or a ZIP of them). "
         "A **Symbol** column is generated from the text inside the brackets of **Company** and "
         "placed to its left."
     )
@@ -875,11 +918,16 @@ def main():
 
     # ---------------- checklist ----------------
     st.subheader("📋 File Checklist")
+    st.caption("Files are recognised by the columns inside them, so the file names can be anything "
+               "(e.g. 'stocks (12).csv' can hold any of the data sets).")
     by_tab, ignored = {}, []
     for f in candidates:
-        idx = resolve_tab_idx(f.name)
+        if not f.name.lower().endswith(".csv"):
+            ignored.append(f"{f.name} (not a .csv)")
+            continue
+        idx, why = detect_tab_idx(f.getvalue())
         if idx is None:
-            ignored.append(f.name)
+            ignored.append(f"{f.name} ({why})")
         else:
             by_tab.setdefault(idx, []).append(f)
 
@@ -892,16 +940,16 @@ def main():
             chosen = files[0]
             if len(files) > 1:
                 chosen = files[col.selectbox(
-                    f"⚠️ {len(files)} files match {t['file']}:", options=list(range(len(files))),
+                    f"⚠️ {len(files)} files look like {t['category']} ({t['idx']}):", options=list(range(len(files))),
                     format_func=lambda i, _f=files: _f[i].name, key=f"select_{t['idx']}")]
             valid[t["idx"]] = chosen
-            col.markdown(f"**✅ {t['file']}** <small style='color:green;'>— {t['category']}</small>",
-                         unsafe_allow_html=True)
+            col.markdown(f"**✅ {t['idx']} · {t['category']}** <small style='color:green;'>"
+                         f"← {chosen.name}</small>", unsafe_allow_html=True)
         else:
-            col.markdown(f"**❌ {t['file']}** — <span style='color:#d9534f;font-weight:bold;'>Missing</span> "
-                         f"<small>({t['category']})</small>", unsafe_allow_html=True)
+            col.markdown(f"**❌ {t['idx']} · {t['category']}** — "
+                         f"<span style='color:#d9534f;font-weight:bold;'>Missing</span>", unsafe_allow_html=True)
     if ignored:
-        st.warning("Ignored (name doesn't match stocks / stocks (N)): " + ", ".join(sorted(ignored)))
+        st.warning("Ignored: " + "; ".join(sorted(ignored)))
 
     st.markdown("---")
 
@@ -921,7 +969,7 @@ def main():
 
     if not valid:
         if candidates:
-            st.warning("⚠️ None of the uploaded file names match stocks.csv / stocks (1).csv … stocks (14).csv.")
+            st.warning("⚠️ None of the uploaded files could be recognised as one of the 15 data sets.")
         _scroll()
         return
 
@@ -1035,7 +1083,8 @@ def main():
     if st.button("🚀 Execute Structural Consolidation", type="primary"):
         with st.spinner("Building Excel files…"):
             st.session_state["consolidation_result"] = {
-                "output_bytes": build_workbook(processed, master_df, master_order, include_tabs=True),
+                "output_bytes": build_workbook(processed, master_df, master_order, include_tabs=True,
+                                               source_names={i: f.name for i, f in valid.items()}),
                 "master_only_bytes": build_workbook(processed, master_df, master_order, include_tabs=False),
                 "master_df": master_df,
                 "master_order": list(master_order),
