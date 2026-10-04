@@ -306,6 +306,7 @@ def column_format(col, series=None):
 # Format: "Column": (url_prefix, url_suffix, text_shown, append_symbol_to_text)
 HYPERLINK_SPECS = {
     "NSE Chart": ("https://www.nseindia.com/get-quotes/equity?symbol=", "", "🟢", False),
+    "NewW NSE": ("https://marketlens.nseindia.com/stocks/", "", "Nnse ", True),
     "Trading View": ("https://www.tradingview.com/symbols/", "", "Tre ", True),
     "History Data": ("https://www.equitypandit.com/historical-data/", "", "his ", True),
     "Chartlink": ("https://chartink.com/stocks/", ".html", "CL ", True),
@@ -320,9 +321,10 @@ for _cat in CATEGORY_ORDER:
     for _c in CATEGORY_COLUMNS[_cat]:
         if _c not in MASTER_ORDER:
             MASTER_ORDER.append(_c)
-# NSE Chart dot sits right after Company; the other links go at the far right.
+# NSE Chart dot sits right after Company (NewW NSE next to it); the other links go at the far right.
 MASTER_ORDER.insert(MASTER_ORDER.index("Company") + 1, "NSE Chart")
-MASTER_ORDER += [c for c in LINK_COLUMNS if c != "NSE Chart"]
+MASTER_ORDER.insert(MASTER_ORDER.index("NSE Chart") + 1, "NewW NSE")   # right beside NSE Chart
+MASTER_ORDER += [c for c in LINK_COLUMNS if c not in ("NSE Chart", "NewW NSE")]
 
 
 # =====================================================================================
