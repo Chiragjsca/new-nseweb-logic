@@ -315,6 +315,7 @@ HYPERLINK_SPECS = {
     "Screener": ("https://www.screener.in/company/", "", "Scr ", True),
     "Marketsmith": ("https://marketsmithindia.com/mstool/eval/", "/evaluation.jsp", "ms ", True),
     "Zerodha": ("https://zerodha.com/markets/stocks/NSE/", "", "Z ", True),
+    "innovacia": ("https://innovacia.in/?s=", "", "innovacia ", True),   # keep last: right of Zerodha
 }
 LINK_COLUMNS = list(HYPERLINK_SPECS)
 
