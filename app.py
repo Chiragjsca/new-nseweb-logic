@@ -852,6 +852,8 @@ def parse_row_selector(text, n_rows):
 
 
 DEFAULT_URLS = [
+    "https://marketlens.nseindia.com",
+    "https://marketlens.nseindia.com/create-screen",
     "https://www.nseindia.com/market-data/stocks-traded",
     "https://www.nseindia.com/all-reports/",
     "https://www.nseindia.com/static/market-data/securities-available-for-trading",
