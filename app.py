@@ -851,6 +851,51 @@ def parse_row_selector(text, n_rows):
     return indices
 
 
+DEFAULT_URLS = [
+    "https://www.nseindia.com/market-data/stocks-traded",
+    "https://www.nseindia.com/all-reports/",
+    "https://www.nseindia.com/static/market-data/securities-available-for-trading",
+    "https://www.nseindia.com/market-data/live-equity-market",
+    "https://www.nseindia.com/market-data/pre-open-market-cm-and-emerge-market",
+    "https://innovacia.in/?s=",
+    "https://www.nseindia.com/resources/exchange-communication-press-releases",
+    "https://www.nseindia.com/resources/exchange-communication-circulars",
+    "https://www.nseindia.com/companies-listing/corporate-filings-voting-results",
+    "https://www.nseindia.com/companies-listing/corporate-filings-postal-ballot",
+    "https://www.nseindia.com/companies-listing/corporate-filings-unitholding-pattern",
+    "https://www.nseindia.com/companies-listing/corporate-filings-shareholding-pattern",
+    "https://www.nseindia.com/static/market-data/market-timings",
+]
+
+
+def render_reference_urls():
+    """Editable list of reference links (session-only: add / remove; nothing is saved to disk)."""
+    st.subheader("🔗 NSE Reference URLs")
+    st.caption("Default NSE links are pre-loaded below. Add your own URLs with the box underneath.")
+    if "custom_urls" not in st.session_state:
+        st.session_state["custom_urls"] = DEFAULT_URLS.copy()
+
+    url_in_col, url_btn_col = st.columns([5, 1])
+    with url_in_col:
+        new_url = st.text_input("Add a URL", key="new_url_input", placeholder="https://...",
+                                label_visibility="collapsed")
+    with url_btn_col:
+        if st.button("➕ Add URL", key="add_url_btn", **_stretch()):
+            candidate = (new_url or "").strip()
+            if candidate and candidate not in st.session_state["custom_urls"]:
+                st.session_state["custom_urls"].append(candidate)
+                st.rerun()
+
+    for i, url in enumerate(st.session_state["custom_urls"]):
+        link_col, del_col = st.columns([9, 1])
+        with link_col:
+            st.markdown(f"🔗 [{url}]({url})")
+        with del_col:
+            if st.button("🗑️", key=f"del_url_{i}", help="Remove this URL"):
+                st.session_state["custom_urls"].pop(i)
+                st.rerun()
+
+
 def jump_to(anchor_id):
     st.session_state["scroll_target"] = anchor_id
     st.rerun()
@@ -1016,6 +1061,8 @@ def main():
             else:
                 st.button(f"🚫 {t['sheet']}", key=f"jump_disabled_{t['idx']}", disabled=True, **S,
                           help="Not available — upload the matching file first.")
+    st.markdown("---")
+    render_reference_urls()
     st.markdown("---")
 
     if not valid:
