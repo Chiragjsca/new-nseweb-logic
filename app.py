@@ -180,12 +180,13 @@ RAW_TO_TARGET_SPEC = {
     "Company": ["Company"],
     "Sector": ["Sector"],
     "Sub Sector": ["Sub Sector"],
-    "Market Cap (in Cr)": ["Market Cap"],              # raw is in rupees -> converted to Cr
+    "Market Cap (in Cr)": ["Market Cap"],  # Raw INR value divided by 10,000,000
     "1D Return (%)": ["1D Return (%)"],
     "1W Return (%)": ["1W Return (%)"],
     "1M Return (%)": ["1M Return (%)"],
     "Volume": ["Volume"],
     "Price to Earning (P/E)": ["PE Ratio", "P/E", "PE"],
+    # Valuation & Profitability
     "Debt to Equity": ["Debt/Equity", "Debt to Equity"],
     "Earning Per Share (EPS)": ["EPS"],
     "Dividend Per Share(DPS)": ["DPS"],
@@ -195,10 +196,12 @@ RAW_TO_TARGET_SPEC = {
     "Face Value": ["Face Value"],
     "Promoter Holding (%)": ["Promoter Holding (%)"],
     "Public Holding": ["Public Holding (%)", "Public Holding"],
+    # Growth Metrics
     "Return Over % Year to Date": ["YTD Returns %", "YTD Return %"],
     "Return Over % 1 Year": ["1y Returns % (%)", "1Y Returns %", "1Y Return %"],
     "Return Over % 3 Years": ["3Y Return % (%)", "3Y Returns %", "3Y Return %"],
     "Return Over % 5 Years": ["5Y Returns % (%)", "5Y Return %", "5Y Returns %"],
+    # Price Metrics
     "VWAP": ["VWAP"],
     "Open Price": ["Open Price", "Open"],
     "High Price": ["High", "High Price"],
@@ -212,21 +215,26 @@ RAW_TO_TARGET_SPEC = {
     "All time High": ["ATH"],
     "Daily Volatility": ["Daily Volatility"],
     "Annualized Volatility": ["Ann. Volatility", "Annualized Volatility"],
+    # Technical Indicators
     "20 DMA": ["20 DMA"],
     "50 DMA": ["50 DMA"],
     "200 DMA": ["200 DMA"],
+    # Profit & Loss
     "Total Income (in Lakhs)": ["Income (in lakhs)"],
     "Total Expense (in Lakhs)": ["Expense (in lakhs)"],
     "Current Tax (in Lakhs)": ["Curr. Tax (in lakhs)"],
     "Deferred Tax (in Lakhs)": ["Deff Tax (in lakhs)", "Def. Tax (in lakhs)"],
     "Total Tax Expenses (in Lakhs)": ["Total Tax (in lakhs)"],
+    # Balance Sheet
     "Total Equity (in Lakhs)": ["Equity (in lakhs)"],
     "Total Assets (in Lakhs)": ["Total Assets (in lakhs)"],
     "Current Assets (in Lakhs)": ["Curr. Assets (in Lakhs)"],
     "Non-Current Assets (in Lakhs)": ["non-curr. assets (in lakhs)"],
     "Total Liabilities (in Lakhs)": ["Total Liabilities (in lakhs)"],
     "Current Liabilities (in Lakhs)": ["Curr. Liabilities (in lakhs)"],
-    "Non-Current Liabilities (in Lakhs)": ["non- curr. Liabilities (in lakhs)"],
+    "Non-Current Liabilities (in Lakhs)": [
+        "non- curr. Liabilities (in lakhs)"
+    ],
     "Total Borrowings (in Lakhs)": ["Total Debt (in lakhs)"],
 }
 
